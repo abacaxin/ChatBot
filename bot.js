@@ -146,9 +146,9 @@ function salvarAdms(dados) {
       }
 
       const partes = message.body.split(" ");
-      gpNome = partes.slice(1).join(" ").toUpperCase();
+      const gpSet = partes.slice(1).join(" ").toUpperCase();
 
-      if (!gpNome) {
+      if (!gpSet) {
           message.reply("Use: !racemode NOME_DO_GP");
           return;
       }
@@ -175,16 +175,16 @@ function salvarAdms(dados) {
       const raceStart = new Date(qualyEnd.getTime() + 1*60*60*1000); // 13h do segundo dia
       const raceEnd = new Date(raceStart.getTime() + 24*60*60*1000); // +24h
 
-      dados[gpNome] = {
+      dados[gpSet] = {
           qualy_start: qualyStart.toISOString(),
           qualy_end: qualyEnd.toISOString(),
           race_start: raceStart.toISOString(),
           race_end: raceEnd.toISOString()
       };
-      dados.current_gp = gpNome;
+      dados.current_gp = gpSet;
       salvarRaceMode(dados);
 
-      message.reply(`Race mode iniciado para ${gpNome}!\nQualy: 12h do dia 1 → 12h do dia 2\nCorrida: 13h do dia 2 → 13h do dia 3`);
+      message.reply(`Race mode iniciado para ${gpSet}!\nQualy: 12h do dia 1 → 12h do dia 2\nCorrida: 13h do dia 2 → 13h do dia 3`);
       return;
     }
 
