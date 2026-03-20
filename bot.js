@@ -357,17 +357,11 @@ function salvarAdms(dados) {
     }
 
     // --- Comando !adm ---
-    /*if (texto === "!adm") {
-      if (!ADM_IDS.includes(message.author)) {
-        ADM_IDS.push(message.author);
-        salvarAdms(ADM_IDS); // salva no arquivo
-        message.reply("Você foi registrado como administrador!");
-      } else {
-        message.reply("Você já é um administrador");
-      }
+    if (texto === "!adm") {
+      message.reply("`Este comando não está mais disponível`");
       return;
     }
-    */
+    
     // --- Comando !menu ---
     if (texto === "!menu") {
       mostrarMenu(message);
