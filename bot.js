@@ -18,9 +18,13 @@ function salvarAdms(dados) {
   fs.writeFileSync(admsFile, JSON.stringify(dados, null, 2));
 }
 
-  const client = new Client({
-    authStrategy: new LocalAuth()
-  });
+const client = new Client({
+  authStrategy: new LocalAuth(),
+  puppeteer: {
+    executablePath: "/usr/bin/chromium-browser",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  }
+});
 
   const chatID = "120363423256823339@g.us";
 
