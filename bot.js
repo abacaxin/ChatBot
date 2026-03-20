@@ -1,8 +1,8 @@
-  const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
-  const qrcode = require("qrcode-terminal");
-  const fs = require("fs");
-  const { read } = require("./ocrbot");
-  const {readD } = require("./ocr_for2");
+const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
+const qrcode = require("qrcode-terminal");
+const fs = require("fs");
+const { read } = require("./ocrbot");
+const {readD } = require("./ocr_for2");
 
 const admsFile = "adms.json";
 let ADM_IDS = carregarAdms();
@@ -357,7 +357,7 @@ function salvarAdms(dados) {
     }
 
     // --- Comando !adm ---
-    if (texto === "!adm") {
+    /*if (texto === "!adm") {
       if (!ADM_IDS.includes(message.author)) {
         ADM_IDS.push(message.author);
         salvarAdms(ADM_IDS); // salva no arquivo
@@ -367,7 +367,7 @@ function salvarAdms(dados) {
       }
       return;
     }
-
+    */
     // --- Comando !menu ---
     if (texto === "!menu") {
       mostrarMenu(message);
