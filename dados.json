@@ -1,4 +1,15 @@
 {
   "data": "2026-03-20",
-  "tempos": []
+  "tempos": [
+    {
+      "nick": "JonSenna02",
+      "tempo": "00:51.964",
+      "penalidade": 0
+    },
+    {
+      "nick": "Pedriinnws33FRM",
+      "tempo": "00:57.497",
+      "penalidade": 0
+    }
+  ]
 }
