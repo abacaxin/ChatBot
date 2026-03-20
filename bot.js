@@ -3,6 +3,7 @@ const qrcode = require("qrcode-terminal");
 const fs = require("fs");
 const { read } = require("./ocrbot");
 const {readD } = require("./ocr_for2");
+const gpNome = null;
 
 const admsFile = "adms.json";
 let ADM_IDS = carregarAdms();
@@ -145,7 +146,7 @@ function salvarAdms(dados) {
       }
 
       const partes = message.body.split(" ");
-      const gpNome = partes.slice(1).join(" ").toUpperCase();
+      gpNome = partes.slice(1).join(" ").toUpperCase();
 
       if (!gpNome) {
           message.reply("Use: !racemode NOME_DO_GP");
@@ -358,10 +359,15 @@ function salvarAdms(dados) {
 
     // --- Comando !adm ---
     if (texto === "!adm") {
-      message.reply("`Este comando não está mais disponível`");
+      if (!ADM_IDS.includes(message.author)) {
+        ADM_IDS.push(message.author);
+        salvarAdms(ADM_IDS); // salva no arquivo
+        message.reply("Você foi registrado como administrador!");
+      } else {
+        message.reply("Você já é um administrador");
+      }
       return;
     }
-    
     // --- Comando !menu ---
     if (texto === "!menu") {
       mostrarMenu(message);
@@ -611,7 +617,7 @@ async function gerarTabela(message) {
   });
 
   const nomeGP = message.body.replace("!tabela", "").trim().toUpperCase();
-  let resposta = `${nomeGP || "GP"} \n\n`;
+  let resposta = `GP DA ${nomeGP ||""} \n\n`;
   const participantes = carregarParticipantes();
 
   ordenados.forEach((t, i) => {
@@ -622,7 +628,9 @@ async function gerarTabela(message) {
     const nomeExibido = participante ? participante.nome : t.nick;
     const equipe = participante ? participante.equipe : "N/D";
 
-    resposta += `P${i+1} - ${tempoFinal}${pen} - ${nomeExibido} (${equipe})\n`;
+    resposta += `P${i+1} -: ${nomeExibido} (*${equipe}*)\n`;
+    resposta += `Tempo ${tempoFinal}${pen}`
+    resposta += "----------------"
   });
 
   message.reply(resposta);
