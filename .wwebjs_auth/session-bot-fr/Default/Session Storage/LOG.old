@@ -1,5 +1,5 @@
-2026/03/20-07:12:25.928 8b2c Recovering log #3
-2026/03/20-07:12:25.929 8b2c Level-0 table #5: started
-2026/03/20-07:12:25.936 8b2c Level-0 table #5: 340 bytes OK
-2026/03/20-07:12:25.948 8b2c Delete type=0 #3
-2026/03/20-07:12:25.948 8b2c Delete type=3 #2
+2026/03/20-07:13:02.177 8c3c Recovering log #6
+2026/03/20-07:13:02.178 8c3c Level-0 table #8: started
+2026/03/20-07:13:02.186 8c3c Level-0 table #8: 326 bytes OK
+2026/03/20-07:13:02.206 8c3c Delete type=0 #6
+2026/03/20-07:13:02.206 8c3c Delete type=3 #4
