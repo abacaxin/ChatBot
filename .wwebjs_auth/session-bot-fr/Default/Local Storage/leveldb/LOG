@@ -1,0 +1,41 @@
+2026/03/20-07:13:00.933 8c3c Recovering log #6
+2026/03/20-07:13:01.026 8c3c Delete type=0 #6
+2026/03/20-07:13:01.027 8c3c Delete type=3 #4
+2026/03/20-10:04:39.495 8c3d Level-0 table #10: started
+2026/03/20-10:04:39.505 8c3d Level-0 table #10: 19873 bytes OK
+2026/03/20-10:04:39.510 8c3d Delete type=0 #8
+2026/03/20-12:11:39.804 8c3c Level-0 table #12: started
+2026/03/20-12:11:39.813 8c3c Level-0 table #12: 14355 bytes OK
+2026/03/20-12:11:39.819 8c3c Delete type=0 #9
+2026/03/20-13:54:52.074 8c3d Level-0 table #14: started
+2026/03/20-13:54:52.082 8c3d Level-0 table #14: 14544 bytes OK
+2026/03/20-13:54:52.088 8c3d Delete type=0 #11
+2026/03/20-13:54:52.089 8c3c Compacting 4@0 + 0@1 files
+2026/03/20-13:54:52.097 8c3c Generated table #15@0: 82 keys, 11667 bytes
+2026/03/20-13:54:52.097 8c3c Compacted 4@0 + 0@1 files => 11667 bytes
+2026/03/20-13:54:52.102 8c3c compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/03/20-13:54:52.103 8c3c Delete type=2 #5
+2026/03/20-13:54:52.103 8c3c Delete type=2 #10
+2026/03/20-13:54:52.103 8c3c Delete type=2 #14
+2026/03/20-13:54:52.103 8c3c Delete type=2 #12
+2026/03/20-15:13:30.261 8c3c Level-0 table #17: started
+2026/03/20-15:13:30.267 8c3c Level-0 table #17: 14414 bytes OK
+2026/03/20-15:13:30.273 8c3c Delete type=0 #13
+2026/03/20-16:34:59.882 8c3c Level-0 table #19: started
+2026/03/20-16:34:59.893 8c3c Level-0 table #19: 14516 bytes OK
+2026/03/20-16:34:59.899 8c3c Delete type=0 #16
+2026/03/20-18:02:27.019 8c3d Level-0 table #21: started
+2026/03/20-18:02:27.031 8c3d Level-0 table #21: 14444 bytes OK
+2026/03/20-18:02:27.035 8c3d Delete type=0 #18
+2026/03/20-19:35:10.152 8c3d Level-0 table #23: started
+2026/03/20-19:35:10.162 8c3d Level-0 table #23: 14546 bytes OK
+2026/03/20-19:35:10.170 8c3d Delete type=0 #20
+2026/03/20-19:35:10.171 8c3d Compacting 4@0 + 1@1 files
+2026/03/20-19:35:10.184 8c3d Generated table #24@0: 82 keys, 11683 bytes
+2026/03/20-19:35:10.184 8c3d Compacted 4@0 + 1@1 files => 11683 bytes
+2026/03/20-19:35:10.191 8c3d compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/03/20-19:35:10.192 8c3d Delete type=2 #19
+2026/03/20-19:35:10.192 8c3d Delete type=2 #23
+2026/03/20-19:35:10.192 8c3d Delete type=2 #15
+2026/03/20-19:35:10.192 8c3d Delete type=2 #21
+2026/03/20-19:35:10.192 8c3d Delete type=2 #17

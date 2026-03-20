@@ -1,9 +1,43 @@
 [
-  
   {
     "id": "120363425840527357@g.us",
     "nick": "Clodoaldo",
     "nome": "Clodoaldo",
     "equipe": "BMW"
+  },
+  {
+    "nick": "Zenon",
+    "nome": "Filippo",
+    "equipe": "(Filippo Zenon)"
+  },
+  {
+    "id": "40609033281561@lid",
+    "nick": "TheChildSpirit04",
+    "nome": "Araújo",
+    "equipe": "RacingBulls"
+  },
+  {
+    "id": "77267199893514@lid",
+    "nick": "Kzinn05",
+    "nome": "Kauã",
+    "equipe": "Prema Motorsport F1 team"
+  },
+  {
+    "id": "155821430296814@lid",
+    "nick": "THEDG67",
+    "nome": "Douglas",
+    "equipe": "Prema motorsport"
+  },
+  {
+    "id": "174676940705846@lid",
+    "nick": "coutinho_77",
+    "nome": "Coutinho",
+    "equipe": "Scuderia Ferrari"
+  },
+  {
+    "id": "99291540496509@lid",
+    "nick": "Pedriinnws33FRM",
+    "nome": "Pedro",
+    "equipe": "Audi"
   }
 ]
