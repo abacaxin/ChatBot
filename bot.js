@@ -20,7 +20,7 @@ function salvarAdms(dados) {
 const client = new Client({
   authStrategy: new LocalAuth({
     clientId: "bot-fr"
-  })
+  }),
   puppeteer: {
     executablePath: "/usr/bin/chromium-browser",
     headless: true,
@@ -29,7 +29,6 @@ const client = new Client({
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
-      "--no-first-run",
       "--no-zygote",
       "--single-process"
     ]
