@@ -138,6 +138,10 @@ function salvarAdms(dados) {
       }
     }
 
+    if (texto.toLowerCase().includes("ban"){
+      message.reply(`Mermão saporra de comando não existe, para de tentar dar ban seu infitetico \n Eu sou o bot e não aguento mais porraaaaa`);
+      return;
+    }
     // --- Race Mode ---
     if (texto.startsWith("!racemode")) {
       if (!isAdmin(message)) {
@@ -629,8 +633,8 @@ async function gerarTabela(message) {
     const equipe = participante ? participante.equipe : "N/D";
 
     resposta += `P${i+1} -: ${nomeExibido} (*${equipe}*)\n`;
-    resposta += `Tempo ${tempoFinal}${pen}`
-    resposta += "----------------"
+    resposta += `Tempo ${tempoFinal}${pen}\n`
+    resposta += `----------------\n\n`
   });
 
   message.reply(resposta);
@@ -704,7 +708,7 @@ function mostrarMenu(message) {
   ⚠️ *Penalidade (ADM)* → !pen 5 Nome
   ❌ *Remover penalidade (ADM)* → !unpen Nome
 
-  🏁 *Iniciar corrida (Quali e GP) → !racemode nome do GP
+  🏁 *Iniciar corrida (Quali e GP)* → !racemode nome do GP
   📂 *Dados do dia (ADM)* → !data
   🛑 *Encerrar GP (ADM)* → !endgp
   🆔 *Sua credencial* → !credencial
@@ -734,7 +738,7 @@ function mostrarMenuErro(message) {
 ⚠️ *Penalidade (ADM)* → !pen 5 Nome
 ❌ *Remover penalidade (ADM)* → !unpen Nome
 
-🏁 *Iniciar corrida (Quali e GP) → !racemode nome do GP
+🏁 *Iniciar corrida (Quali e GP)* → !racemode nome do GP
 📂 *Dados do dia (ADM)* → !data
 🛑 *Encerrar GP (ADM)* → !endgp
 🆔 *Sua credencial* → !credencial
