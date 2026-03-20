@@ -18,7 +18,9 @@ function salvarAdms(dados) {
   fs.writeFileSync(admsFile, JSON.stringify(dados, null, 2));
 }
 const client = new Client({
-  authStrategy: new LocalAuth(),
+  authStrategy: new LocalAuth({
+    clientId: "bot-fr"
+  })
   puppeteer: {
     executablePath: "/usr/bin/chromium-browser",
     headless: true,
