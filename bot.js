@@ -17,12 +17,20 @@ function carregarAdms() {
 function salvarAdms(dados) {
   fs.writeFileSync(admsFile, JSON.stringify(dados, null, 2));
 }
-
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
     executablePath: "/usr/bin/chromium-browser",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process"
+    ]
   }
 });
 
