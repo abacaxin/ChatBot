@@ -5,6 +5,20 @@ const { read } = require("./ocrbot");
 const {readD } = require("./ocr_for2");
 const gpNome = null;
 
+
+const gp_IDS = [
+  "120363425840527357@g.us",
+  "120363405848517876@g.us",
+  "120363406708379841@g.us",
+  "120363423256823339@g.us",
+  "120363423390684515@g.us",
+  "120363425428525877@g.us",
+  "120363426666253539@g.us",
+]
+function isGP(message) {
+  return gp_IDS.includes(message.from);
+}
+
 const admsFile = "adms.json";
 let ADM_IDS = carregarAdms();
 // Carrega admins do arquivo
@@ -96,6 +110,7 @@ function salvarAdms(dados) {
 
   // Mensagens
   client.on("message", async message => {
+    if(!isGP(message)) return;
     const id = message.author;
     const texto = message.body.trim().toLowerCase();
 
@@ -107,7 +122,7 @@ function salvarAdms(dados) {
       if (etapa === "nick") {
         dados.nick = message.body.trim();
         dados.etapa = "nome";
-        message.reply("Digite seu nome:");
+        message.reply("Digite seu nome: \n*(lembre-se de colocar a bandeira)*");
         return;
       }
 
@@ -129,7 +144,7 @@ function salvarAdms(dados) {
             equipe: dados.equipe
           });
           await salvarParticipantes(participantes);
-          message.reply("Registro concluído! Agora você pode usar !tempo sem enviar o nick.");
+          message.reply("Registro concluído! \nUse !editar para atualizar sua credencial, ou \n!credencial para verificar seus dados");
         } else {
           message.reply("Você já está registrado.");
         }
@@ -138,7 +153,7 @@ function salvarAdms(dados) {
       }
     }
 
-    if (texto.toLowerCase().includes("ban"){
+    if (texto.toLowerCase().includes("ban")){
       message.reply(`Mermão saporra de comando não existe, para de tentar dar ban seu infitetico \n Eu sou o bot e não aguento mais porraaaaa`);
       return;
     }
@@ -188,7 +203,12 @@ function salvarAdms(dados) {
       dados.current_gp = gpSet;
       salvarRaceMode(dados);
 
-      message.reply(`Race mode iniciado para ${gpSet}!\nQualy: 12h do dia 1 → 12h do dia 2\nCorrida: 13h do dia 2 → 13h do dia 3`);
+      const form = qualyStart.toLocaleDateString("pt-BR",  {
+        day: "2-digit",
+        month: "2-digit"
+      });
+
+      message.reply(`Race mode iniciado para ${gpSet}!\nQualy: 12h do dia ${form} → 12h do dia ${addDay(qualyStart, 1)}\nCorrida: 13h do dia ${addDay(qualyStart, 1)} → 13h do dia ${addDay(qualyStart, 2)}`);
       return;
     }
 
@@ -773,6 +793,15 @@ function jsonParaTXT(dados) {
       texto += "----------------\n";
   });
   return texto;
+}
+
+function addDay(data, dia){
+  const nova = new Date(data);
+  nova.setDate(nova.getDate() + dia);
+  return nova.toLocaleDateString("pt-BR",  {
+    day: "2-digit",
+    month: "2-digit"
+  });
 }
 
 const express = require("express");
