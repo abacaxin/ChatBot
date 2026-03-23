@@ -45,6 +45,7 @@ let registrosPendentes    = {};
 let edicoesPendentes      = {};
 let aguardandoComprovacao = {};
 let salvando              = false;
+let timerAbreQuali  = null;
 let timerFimQuali   = null;
 let timerGridQuali  = null;
 let timerAbreRace   = null;
@@ -491,6 +492,7 @@ async function handleBestLap(message, jogador) {
 }
 
 function cancelarTimers() {
+  if (timerAbreQuali) { clearTimeout(timerAbreQuali); timerAbreQuali = null; }
   if (timerFimQuali)  { clearTimeout(timerFimQuali);  timerFimQuali  = null; }
   if (timerGridQuali) { clearTimeout(timerGridQuali); timerGridQuali = null; }
   if (timerAbreRace)  { clearTimeout(timerAbreRace);  timerAbreRace  = null; }
@@ -500,12 +502,24 @@ function cancelarTimers() {
 function agendarTimers(gpAtual, nomeGP) {
   cancelarTimers();
   const agora          = new Date();
+  const qualyStart     = new Date(gpAtual.qualy_start);
   const qualyEnd       = new Date(gpAtual.qualy_end);
   const raceStart      = new Date(gpAtual.race_start);
   const raceEnd        = new Date(gpAtual.race_end);
+  const msAteQualyStart = qualyStart.getTime() - agora.getTime();
   const msAteQualyEnd  = qualyEnd.getTime()  - agora.getTime();
   const msAteRaceStart = raceStart.getTime() - agora.getTime();
   const msAteRaceEnd   = raceEnd.getTime()   - agora.getTime();
+  if (msAteQualyStart > 0) {
+    timerAbreQuali = setTimeout(() => {
+      const rm = carregarRaceMode();
+      if (!rm.current_gp) return;
+      client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
+    }, msAteQualyStart);
+  } else {
+    // Quali já em andamento quando o bot iniciou/GP foi criado
+    client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
+  }
   if (msAteQualyEnd > 0) {
     timerFimQuali = setTimeout(async () => {
       const rm = carregarRaceMode();
@@ -727,7 +741,6 @@ client.on("message", async message => {
     agendarTimers(racemode[gpSet], gpSet);
     const form = qualyStart.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
     message.reply("🏁 *Race mode iniciado: " + gpSet + "*\n🟢 Quali: 12h do dia " + form + " → 12h do dia " + addDay(qualyStart, 1) + "\n🏎️ Corrida: 13h do dia " + addDay(qualyStart, 1) + " → 13h do dia " + addDay(qualyStart, 2));
-    client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + gpSet + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
     return;
   }
 
@@ -935,8 +948,10 @@ client.on("message", async message => {
     const racemode       = carregarRaceMode();
     const gpAtual        = racemode.current_gp ? racemode[racemode.current_gp] : null;
     const sessao         = getSessaoAtual(gpAtual);
-    const grupoPermitido = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
-    if (message.from !== grupoPermitido) { message.reply("Use o grupo correto para enviar tempos."); return; }
+    if (sessao === "QUALI" || sessao === "RACE") {
+      const grupoPermitido = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
+      if (message.from !== grupoPermitido) { message.reply("Use o grupo correto para enviar tempos."); return; }
+    }
     const participantes = carregarParticipantes();
     const jogador       = participantes.find(p => p.id === id);
     if (!jogador) { message.reply("Você precisa se registrar primeiro com !registrar."); return; }
@@ -947,8 +962,10 @@ client.on("message", async message => {
     const racemode       = carregarRaceMode();
     const gpAtual        = racemode.current_gp ? racemode[racemode.current_gp] : null;
     const sessao         = getSessaoAtual(gpAtual);
-    const grupoPermitido = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
-    if (message.from !== grupoPermitido) { message.reply("Use o grupo correto para enviar tempos."); return; }
+    if (sessao === "QUALI" || sessao === "RACE") {
+      const grupoPermitido = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
+      if (message.from !== grupoPermitido) { message.reply("Use o grupo correto para enviar tempos."); return; }
+    }
     const participantes = carregarParticipantes();
     const jogador       = participantes.find(p => p.id === id);
     if (!jogador) { message.reply("Você precisa se registrar primeiro com !registrar."); return; }
