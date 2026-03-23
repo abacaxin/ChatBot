@@ -7,10 +7,9 @@ async function read(caminhoImagem, nick, nomeGP) {
 
   // 1. Verifica se o nome do GP aparece na imagem
   if (nomeGP) {
-    const melhorScoreGP = Math.max(
-      ...linhas.map(l => StringSimilarity.compareTwoStrings(l.toLowerCase(), nomeGP.toLowerCase()))
-    );
-    if (melhorScoreGP < 0.4) {
+    const nomeGPLower = nomeGP.toLowerCase();
+    const encontrado  = linhas.some(l => l.toLowerCase().includes(nomeGPLower));
+    if (!encontrado) {
       return { erro: "gp_nao_encontrado" };
     }
   }
