@@ -5,14 +5,14 @@ async function read(caminhoImagem, nick, nomeGP) {
   const { data: { text } } = await Tesseract.recognize(caminhoImagem, "eng");
   const linhas = text.split("\n").filter(l => l.trim());
 
-  // 1. Verifica nome do GP na imagem
+  // 1. Verifica se o nome do GP aparece na imagem
   if (nomeGP) {
-    const melhorMatchGP = Math.max(
-      ...linhas.map(l => StringSimilarity.compareTwoStrings(
-        l.toLowerCase(), nomeGP.toLowerCase()
-      ))
+    const melhorScoreGP = Math.max(
+      ...linhas.map(l => StringSimilarity.compareTwoStrings(l.toLowerCase(), nomeGP.toLowerCase()))
     );
-    if (melhorMatchGP < 0.4) return { erro: "gp_nao_encontrado" };
+    if (melhorScoreGP < 0.4) {
+      return { erro: "gp_nao_encontrado" };
+    }
   }
 
   // 2. Acha a linha do nick e extrai o tempo
@@ -20,9 +20,7 @@ async function read(caminhoImagem, nick, nomeGP) {
   let melhorScore = 0;
 
   linhas.forEach(linha => {
-    const score = StringSimilarity.compareTwoStrings(
-      linha.toLowerCase(), nick.toLowerCase()
-    );
+    const score = StringSimilarity.compareTwoStrings(linha.toLowerCase(), nick.toLowerCase());
     if (score > melhorScore) {
       melhorScore = score;
       melhorLinha = linha;
