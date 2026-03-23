@@ -13,8 +13,8 @@ const TEMPO_GROUP_ID        = "120363423390684515@g.us";
 const SOLICITACOES_GROUP_ID = "120363406605100670@g.us";
 
 const COMISSARIOS = [
-  "XXXXXXXXXXXXXXXX@c.us",
-  "YYYYYYYYYYYYYYYY@c.us",
+  "174676940705846@lid",
+  "139449249824780@lid"
 ];
 
 const gp_IDS = [
@@ -67,7 +67,13 @@ function carregarPenPendentes()  { return carregar(penPendentesFile, {}); }
 function salvarPenPendentes(d)   { salvar(penPendentesFile, d); }
 function carregarHistorico()     { return carregar(historicoFile, []); }
 function salvarHistorico(d)      { salvar(historicoFile, d); }
-function carregarCampeonato()    { return carregar(campeonatoFile, { pilotos: {}, equipes: {} }); }
+function carregarCampeonato() {
+  const dados = carregar(campeonatoFile, { pilotos: {}, equipes: {} });
+  // garante estrutura mesmo se o arquivo existir mas estiver incompleto
+  if (!dados.pilotos) dados.pilotos = {};
+  if (!dados.equipes) dados.equipes = {};
+  return dados;
+}
 function salvarCampeonato(d)     { salvar(campeonatoFile, d); }
 function carregarBestlapPend()   { return carregar(bestlapPendFile, {}); }
 function salvarBestlapPend(d)    { salvar(bestlapPendFile, d); }
