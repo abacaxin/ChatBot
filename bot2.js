@@ -8,8 +8,8 @@ const { readD } = require("./ocr_for2");
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
 const REGISTRO_GROUP_ID = "120363405848517876@g.us";
-const TEMPO_GROUP_ID    = "120363423256823339@g.us"; // ← confirm this ID
-const chatID            = "120363423256823339@g.us";
+const QUALI_GROUP_ID    = "120363425428525877@g.us"; // ← confirmar ID do grupo da quali
+const TEMPO_GROUP_ID    = "120363423390684515@g.us"; // ← confirmar ID do grupo da corrida
 
 const gp_IDS = [
   "120363425840527357@g.us",
@@ -21,8 +21,9 @@ const gp_IDS = [
   "120363426666253539@g.us",
 ];
 
-// F1 points system P1→P10
-const F1_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+// F1 points — corrida P1→P10, quali P1→P3
+const F1_POINTS    = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+const QUALI_POINTS = [3, 2, 1];
 
 // ─── FILE PATHS ───────────────────────────────────────────────────────────────
 
@@ -160,26 +161,30 @@ function listarEquipes() {
 function mostrarMenu(message) {
   message.reply(
     "🏁 *MENU DO BOT - CAMPEONATO*\n\n" +
-    "📥 *Envio de tempo*\n" +
-    "→ !tempo - tabela diária\n" +
-    "→ !bestlap - vitória/best lap (fora do top20)\n" +
-    "(envie junto a imagem)\n\n" +
-    "📊 *Tabela* → !tabela\n" +
-    "👤 *Meu tempo e posição* → !mylap\n" +
-    "📈 *Gap até posição* → !gap POSICAO\n" +
-    "📈 *Gap até piloto* → !gapto NOME\n" +
-    "🏆 *Campeonato* → !campeonato\n" +
-    "🏗️ *Construtores* → !construtores\n" +
-    "📋 *Grid de equipes* → !grid\n" +
-    "📊 *Estatísticas* → !stats NICK\n\n" +
-    "⚠️ *Penalidade (ADM)* → !pen 5 Nick\n" +
-    "❌ *Remover penalidade (ADM)* → !unpen Nick\n" +
-    "🏁 *Iniciar GP (ADM)* → !racemode NOME\n" +
-    "📂 *Exportar dados (ADM)* → !data / !data csv / !data txt\n" +
-    "🛑 *Encerrar GP (ADM)* → !endgp\n" +
-    "🆔 *Credencial* → !credencial\n" +
-    "✏️ *Editar cadastro* → !editar\n\n" +
-    "ℹ️ Penalidades são em segundos\n" +
+    "*📥 Envio de tempo*\n" +
+    "→ !tempo — tabela diária (com imagem)\n" +
+    "→ !bestlap — vitória/best lap fora do top20 (com imagem)\n\n" +
+    "*📊 Sessão*\n" +
+    "→ !tabela — classificação atual da sessão\n" +
+    "→ !mylap — meu tempo e posição atual\n" +
+    "→ !gap POSICAO — meu gap até uma posição\n" +
+    "→ !gapto NOME — meu gap até um piloto\n\n" +
+    "*🏆 Campeonato*\n" +
+    "→ !campeonato — classificação de pilotos\n" +
+    "→ !construtores — classificação de equipes\n" +
+    "→ !stats NICK — histórico de um piloto\n\n" +
+    "*📋 Geral*\n" +
+    "→ !grid — pilotos agrupados por equipe\n" +
+    "→ !credencial — ver seu cadastro\n" +
+    "→ !editar — editar seu cadastro\n\n" +
+    "*🔧 ADM*\n" +
+    "→ !racemode NOME — iniciar GP\n" +
+    "→ !endgp — encerrar GP e gerar resultado\n" +
+    "→ !pen SEGUNDOS NICK — aplicar penalidade\n" +
+    "→ !unpen NICK — remover penalidade\n" +
+    "→ !data / !data csv / !data txt — exportar dados\n\n" +
+    "ℹ️ Pontuação quali: P1=3pts P2=2pts P3=1pt\n" +
+    "ℹ️ Pontuação corrida: 25-18-15-12-10-8-6-4-2-1\n" +
     "🏎️ Boa corrida!"
   );
 }
@@ -221,13 +226,19 @@ async function gerarTabela(message) {
   message.reply(montarTabelaTexto(dados.tempos, "RESULTADOS: GP DE " + racemode.current_gp));
 }
 
-async function gerarTabelaQuali(targetChatID, nomeGP) {
+async function gerarTabelaQuali(nomeGP) {
   const dados = carregarDados();
   if (!dados || dados.tempos.length === 0) {
-    client.sendMessage(targetChatID, "Nenhum tempo registrado na quali.");
+    client.sendMessage(QUALI_GROUP_ID, "Nenhum tempo registrado na quali.");
     return;
   }
-  client.sendMessage(targetChatID, montarTabelaTexto(dados.tempos, "GRID DE LARGADA: GP " + nomeGP));
+  const ordenados     = ordenarTempos(dados.tempos);
+  const participantes = carregarParticipantes();
+
+  // Save quali points (P1→3pts, P2→2pts, P3→1pt)
+  salvarPontuacaoQuali(nomeGP, ordenados, participantes);
+
+  client.sendMessage(QUALI_GROUP_ID, montarTabelaTexto(dados.tempos, "GRID DE LARGADA: GP " + nomeGP));
 }
 
 async function gerarResultado(message) {
@@ -268,6 +279,32 @@ function salvarPontuacao(nomeGP, ordenados, participantes) {
 
   ordenados.forEach((t, i) => {
     const pontos = F1_POINTS[i] || 0;
+    const p      = participantes.find(x => x.nick === t.nick);
+    const nome   = p ? p.nome : t.nick;
+    const equipe = p ? p.equipe : "Particular";
+
+    if (!campeonato.pilotos[nome]) campeonato.pilotos[nome] = { pontos: 0, equipe };
+    campeonato.pilotos[nome].pontos += pontos;
+
+    if (!campeonato.equipes[equipe]) campeonato.equipes[equipe] = { pontos: 0 };
+    campeonato.equipes[equipe].pontos += pontos;
+
+    entrada.resultado.push({ posicao: i + 1, nome, equipe, pontos });
+  });
+
+  historico.push(entrada);
+  salvarCampeonato(campeonato);
+  salvarHistorico(historico);
+}
+
+function salvarPontuacaoQuali(nomeGP, ordenados, participantes) {
+  const campeonato = carregarCampeonato();
+  const historico  = carregarHistorico();
+  const entrada    = { gp: nomeGP + " (QUALI)", data: new Date().toISOString(), resultado: [] };
+
+  ordenados.forEach((t, i) => {
+    const pontos = QUALI_POINTS[i] || 0;
+    if (pontos === 0) return; // só salva P1-P3
     const p      = participantes.find(x => x.nick === t.nick);
     const nome   = p ? p.nome : t.nick;
     const equipe = p ? p.equipe : "Particular";
@@ -357,8 +394,9 @@ function verificarFastestLap(dados, nick, novoTempoMs, sessao) {
   if (outros.length === 0) return;
   const fastestOutros = Math.min(...outros.map(t => tempoParaMs(t.tempo) + (t.penalidade || 0) * 1000));
   if (novoTempoMs < fastestOutros) {
-    const label = sessao === "QUALI" ? "QUALI" : "CORRIDA";
-    client.sendMessage(chatID, "🟣 *VOLTA MAIS RÁPIDA DA " + label + "!*\n👤 " + nick + "\n⏱️ " + msParaTempo(novoTempoMs));
+    const label   = sessao === "QUALI" ? "QUALI" : "CORRIDA";
+    const grupoID = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
+    client.sendMessage(grupoID, "🟣 *VOLTA MAIS RÁPIDA DA " + label + "!*\n👤 " + nick + "\n⏱️ " + msParaTempo(novoTempoMs));
   }
 }
 
@@ -464,13 +502,13 @@ function agendarTimers(gpAtual, nomeGP) {
     timerFimQuali = setTimeout(async () => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
-      client.sendMessage(chatID, "🏁 *SESSÃO DE QUALIFICAÇÃO ENCERRADA!*\nOs comissários estão revisando os tempos. Em 10 minutos teremos o Grid de Largada oficial.");
+      client.sendMessage(QUALI_GROUP_ID, "🏁 *SESSÃO DE QUALIFICAÇÃO ENCERRADA!*\nOs comissários estão revisando os tempos. Em 10 minutos teremos o Grid de Largada oficial.");
       timerGridQuali = setTimeout(async () => {
         const rm2 = carregarRaceMode();
         if (!rm2.current_gp) return;
-        await gerarTabelaQuali(chatID, nomeGP);
+        await gerarTabelaQuali(nomeGP);
         salvarDados({ data: new Date().toISOString().split("T")[0], tempos: [] });
-        client.sendMessage(chatID, "🧹 *DADOS LIMPOS!* O sistema está pronto para receber os tempos da CORRIDA.");
+        client.sendMessage(QUALI_GROUP_ID, "🧹 *DADOS LIMPOS!* O sistema está pronto para receber os tempos da CORRIDA.");
       }, 10 * 60 * 1000);
     }, msAteQualyEnd);
   }
@@ -479,7 +517,7 @@ function agendarTimers(gpAtual, nomeGP) {
     timerAbreRace = setTimeout(() => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
-      client.sendMessage(chatID, "🏁 *CORRIDA ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa corrida! 🏎️");
+      client.sendMessage(TEMPO_GROUP_ID, "🏁 *CORRIDA ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa corrida! 🏎️");
     }, msAteRaceStart);
   }
 
@@ -487,7 +525,7 @@ function agendarTimers(gpAtual, nomeGP) {
     timerFimRace = setTimeout(() => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
-      client.sendMessage(chatID, "🏁 *CORRIDA ENCERRADA!* Aguardem o resultado oficial do ADM.");
+      client.sendMessage(TEMPO_GROUP_ID, "🏁 *CORRIDA ENCERRADA!* Aguardem o resultado oficial do ADM.");
     }, msAteRaceEnd);
   }
 }
@@ -719,7 +757,7 @@ client.on("message", async message => {
       "🟢 Quali: 12h do dia " + form + " → 12h do dia " + addDay(qualyStart, 1) + "\n" +
       "🏎️ Corrida: 13h do dia " + addDay(qualyStart, 1) + " → 13h do dia " + addDay(qualyStart, 2)
     );
-    client.sendMessage(chatID, "🟢 *QUALI ABERTA! GP " + gpSet + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
+    client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + gpSet + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
     return;
   }
 
@@ -730,7 +768,8 @@ client.on("message", async message => {
     const racemode = carregarRaceMode();
     if (!racemode.current_gp) { message.reply("Nenhum GP ativo para encerrar."); return; }
 
-    await gerarResultado(message);
+    await gerarResultado(message); // tenta gerar resultado, mas não bloqueia o encerramento
+
     cancelarTimers();
     delete racemode[racemode.current_gp];
     delete racemode.current_gp;
@@ -958,6 +997,7 @@ client.on("message", async message => {
 
   // ── !editar ────────────────────────────────────────────────────────────────
   if (texto === "!editar") {
+    if (message.from !== REGISTRO_GROUP_ID) { message.reply("Use o grupo de registro para essa função."); return; }
     const participantes = carregarParticipantes();
     const jogador       = participantes.find(p => p.id === id);
     if (!jogador) { message.reply("Você ainda não está registrado! Use !registrar primeiro."); return; }
