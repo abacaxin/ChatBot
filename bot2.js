@@ -997,6 +997,7 @@ client.on("message", async message => {
 
   // ── !editar ────────────────────────────────────────────────────────────────
   if (texto === "!editar") {
+    if (message.from !== REGISTRO_GROUP_ID) { message.reply("Use o grupo de registro para essa função."); return; }
     const participantes = carregarParticipantes();
     const jogador       = participantes.find(p => p.id === id);
     if (!jogador) { message.reply("Você ainda não está registrado! Use !registrar primeiro."); return; }
