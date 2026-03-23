@@ -27,6 +27,7 @@ const gp_IDS = [
   "120363423390684515@g.us",
   "120363425428525877@g.us",
   "120363426666253539@g.us",
+  "120363406605100670@g.us"
 ];
 
 const F1_POINTS    = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
@@ -89,7 +90,7 @@ async function salvarParticipantes(dados) {
 
 let ADM_IDS = carregarAdms();
 function isAdmin(message)      { return ADM_IDS.includes(message.author || message.from); }
-function isComissario(message) { return COMISSARIOS.includes(message.author || message.from) || isAdmin(message); }
+function isComissario(message) { return COMISSARIOS.includes(message.author) || isAdmin(message); }
 function isGP(message)         { return gp_IDS.includes(message.from); }
 
 function tempoParaMs(t) {
@@ -363,6 +364,7 @@ async function removerTempo(message) {
 }
 
 async function aprovarBestlap(message) {
+  console.log("Iniciando aprovação de bestlap...");
   const nick    = message.body.split(" ").slice(1).join(" ").trim();
   if (!nick) { message.reply("Use: !aprovar NICK"); return; }
   const pend    = carregarBestlapPend();
@@ -961,11 +963,13 @@ client.on("message", async message => {
   }
 
   if (texto.startsWith("!aprovar")) {
+    message.reply("⏳ Processando comando...");
     if (!isComissario(message)) { message.reply("Apenas comissários podem aprovar bestlaps."); return; }
     await aprovarBestlap(message); return;
   }
 
   if (texto.startsWith("!remover")) {
+    message.reply("⏳ Processando comando...");
     if (!isComissario(message)) { message.reply("Apenas comissários podem remover tempos."); return; }
     await removerTempo(message); return;
   }
