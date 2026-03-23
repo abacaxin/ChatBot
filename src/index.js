@@ -4,8 +4,8 @@ const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 const fs = require("fs");
 const path = require("path");
-const { read } = require("./ocrbot");
-const { readD } = require("./ocr_for2");
+const { read } = require("./ocr");
+const { readD } = require("./ocr.bestlap");
 
 const REGISTRO_GROUP_ID     = "120363405848517876@g.us";
 const QUALI_GROUP_ID        = "120363425428525877@g.us";
