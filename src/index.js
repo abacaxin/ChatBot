@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { read } = require("./ocr");
 const { readD } = require("./ocr_bestlap");
+const { randomFlag } = require("./randomFlag");
 
 const REGISTRO_GROUP_ID     = "120363405848517876@g.us";
 const QUALI_GROUP_ID        = "120363425428525877@g.us";
@@ -195,7 +196,7 @@ function montarTabelaTexto(tempos, titulo) {
     const p           = participantes.find(x => x.nick === t.nick);
     const nomeExibido = p ? p.nome : t.nick;
     const equipe      = p ? p.equipe : "N/D";
-    resposta += "P" + (i + 1) + " - " + nomeExibido + " (*" + equipe + "*)\nTempo: " + tempoFinal + pen + "\n----------------\n";
+    resposta += "P" + (i + 1) + " | " + nomeExibido + " (*" + equipe + "*) " + tempoFinal + pen + "\n";
   });
   return resposta;
 }
@@ -210,7 +211,10 @@ async function gerarTabela(message) {
   }
   const dados = carregarDados();
   if (!dados || dados.tempos.length === 0) { message.reply("Nenhum tempo registrado ainda."); return; }
-  message.reply(montarTabelaTexto(dados.tempos, "RESULTADOS: GP DE " + racemode.current_gp));
+  const titulo = sessao === "QUALI"
+  ? "CLASSIFICAÇÃO PARCIAL QUALI - GP " + racemode.current_gp
+  : "RESULTADO PARCIAL - GP " + racemode.current_gp;
+  message.reply(montarTabelaTexto(dados.tempos, titulo));
 }
 
 async function gerarTabelaQuali(nomeGP) {
@@ -729,6 +733,17 @@ client.on("message", async message => {
     if (!gpSet)  { message.reply("Use: !racemode NOME_DO_GP"); return; }
     const racemode = carregarRaceMode();
     if (racemode.current_gp) { message.reply("⚠️ Já existe um GP ativo: *" + racemode.current_gp + "*\nUse !endgp antes de iniciar um novo."); return; }
+    const flagQuali = randomFlag();
+    const flagRace  = randomFlag();
+
+    racemode[gpSet] = {
+      qualy_start: qualyStart.toISOString(),
+      qualy_end:   qualyEnd.toISOString(),
+      race_start:  raceStart.toISOString(),
+      race_end:    raceEnd.toISOString(),
+      flag_quali:  flagQuali.flag,   // ex: 🇦🇺
+      flag_race:   flagRace.flag,    // ex: 🇯🇵
+    };
     const agora      = new Date();
     const qualyStart = new Date(agora);
     qualyStart.setHours(12, 0, 0, 0);
