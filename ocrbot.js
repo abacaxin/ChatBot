@@ -12,7 +12,7 @@ async function read(caminhoImagem, nick, nomeGP) {
         l.toLowerCase(), nomeGP.toLowerCase()
       ))
     );
-    if (melhorMatchGP < 0.4) return { erro: "foto não compatível com o gp" };
+    if (melhorMatchGP < 0.4) return { erro: "gp_nao_encontrado" };
   }
 
   // 2. Acha a linha do nick e extrai o tempo
