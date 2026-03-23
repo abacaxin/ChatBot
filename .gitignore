@@ -1,0 +1,17 @@
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
+img/
+dados.json
+dados.csv
+dados.txt
+campeonato.json
+historico.json
+participantes.json
+penalidades_pendentes.json
+bestlap_pendentes.json
+racemode.json
+quali.json
+adms.json
+.DS_Store
+*.log
