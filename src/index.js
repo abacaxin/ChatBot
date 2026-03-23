@@ -15,7 +15,8 @@ const SOLICITACOES_GROUP_ID = "120363406605100670@g.us";
 
 const COMISSARIOS = [
   "174676940705846@lid",
-  "139449249824780@lid"
+  "139449249824780@lid",
+  "215414202183852@lid"
 ];
 
 const gp_IDS = [
@@ -71,7 +72,6 @@ function carregarHistorico()     { return carregar(historicoFile, []); }
 function salvarHistorico(d)      { salvar(historicoFile, d); }
 function carregarCampeonato() {
   const dados = carregar(campeonatoFile, { pilotos: {}, equipes: {} });
-  // garante estrutura mesmo se o arquivo existir mas estiver incompleto
   if (!dados.pilotos) dados.pilotos = {};
   if (!dados.equipes) dados.equipes = {};
   return dados;
@@ -212,8 +212,8 @@ async function gerarTabela(message) {
   const dados = carregarDados();
   if (!dados || dados.tempos.length === 0) { message.reply("Nenhum tempo registrado ainda."); return; }
   const titulo = sessao === "QUALI"
-  ? "CLASSIFICAÇÃO PARCIAL QUALI - GP " + racemode.current_gp
-  : "RESULTADO PARCIAL - GP " + racemode.current_gp;
+    ? "CLASSIFICAÇÃO PARCIAL QUALI - GP " + racemode.current_gp
+    : "RESULTADO PARCIAL - GP " + racemode.current_gp;
   message.reply(montarTabelaTexto(dados.tempos, titulo));
 }
 
@@ -363,9 +363,9 @@ async function removerTempo(message) {
 }
 
 async function aprovarBestlap(message) {
-  const nick = message.body.split(" ").slice(1).join(" ").trim();
+  const nick    = message.body.split(" ").slice(1).join(" ").trim();
   if (!nick) { message.reply("Use: !aprovar NICK"); return; }
-  const pend   = carregarBestlapPend();
+  const pend    = carregarBestlapPend();
   const entrada = pend[nick.toLowerCase()];
   if (!entrada) { message.reply("❌ Nenhum bestlap pendente para " + nick + "."); return; }
   let dados    = getDadosHoje();
@@ -376,6 +376,7 @@ async function aprovarBestlap(message) {
     if (novoMs < tempoAtualMs) {
       dados.tempos[index].tempo      = entrada.tempo;
       dados.tempos[index].penalidade = (dados.tempos[index].penalidade || 0) + (entrada.penalidade || 0);
+      dados.tempos[index].envios     = (dados.tempos[index].envios || 0) + 1;
     } else {
       message.reply("⚠️ O tempo pendente de " + nick + " (" + entrada.tempo + ") não é melhor que o já registrado. Aprovação cancelada.");
       delete pend[nick.toLowerCase()];
@@ -383,7 +384,7 @@ async function aprovarBestlap(message) {
       return;
     }
   } else {
-    dados.tempos.push({ nick: entrada.nick, tempo: entrada.tempo, penalidade: entrada.penalidade || 0 });
+    dados.tempos.push({ nick: entrada.nick, tempo: entrada.tempo, penalidade: entrada.penalidade || 0, envios: 1 });
   }
   salvarDados(dados);
   delete pend[nick.toLowerCase()];
@@ -419,6 +420,14 @@ async function handleTempo(message, jogador) {
     message.reply("Ainda não é horário de envio de tempo.");
     return;
   }
+  if (sessao === "QUALI") {
+    const d = getDadosHoje();
+    const reg = d.tempos.find(t => t.nick === nick);
+    if (reg && (reg.envios || 0) >= 4) {
+      message.reply("🚫 Você já atingiu o limite de 4 envios na quali.");
+      return;
+    }
+  }
   if (!message.hasMedia) { message.reply("Envie a imagem junto com o comando."); return; }
   const agora        = new Date();
   const raceEnd      = new Date(gpAtual.race_end);
@@ -447,6 +456,7 @@ async function handleTempo(message, jogador) {
     if (novoMs < tempoAtualMs) {
       dados.tempos[index].tempo      = tempo;
       dados.tempos[index].penalidade = (dados.tempos[index].penalidade || 0) + aplicarPenal + penPendente;
+      dados.tempos[index].envios     = (dados.tempos[index].envios || 0) + 1;
       message.reply("🟢 " + nick + " novo melhor tempo: " + tempo);
       verificarFastestLap(dados, nick, novoMs, sessao);
     } else {
@@ -454,7 +464,7 @@ async function handleTempo(message, jogador) {
       return;
     }
   } else {
-    dados.tempos.push({ nick, tempo, penalidade: aplicarPenal + penPendente });
+    dados.tempos.push({ nick, tempo, penalidade: aplicarPenal + penPendente, envios: 1 });
     message.reply("✅ " + nick + " seu tempo foi registrado: " + tempo + (penPendente ? " (inclui +" + penPendente + "s de penalidade pendente)" : ""));
     verificarFastestLap(dados, nick, novoMs, sessao);
   }
@@ -475,6 +485,14 @@ async function handleBestLap(message, jogador) {
   } else if (sessao !== "QUALI") {
     message.reply("Ainda não é horário de envio de tempo.");
     return;
+  }
+  if (sessao === "QUALI") {
+    const d = getDadosHoje();
+    const reg = d.tempos.find(t => t.nick === nick);
+    if (reg && (reg.envios || 0) >= 4) {
+      message.reply("🚫 Você já atingiu o limite de 4 envios na quali.");
+      return;
+    }
   }
   if (!message.hasMedia) { message.reply("Envie a imagem junto com o comando."); return; }
   const agora        = new Date();
@@ -505,24 +523,21 @@ function cancelarTimers() {
 
 function agendarTimers(gpAtual, nomeGP) {
   cancelarTimers();
-  const agora          = new Date();
-  const qualyStart     = new Date(gpAtual.qualy_start);
-  const qualyEnd       = new Date(gpAtual.qualy_end);
-  const raceStart      = new Date(gpAtual.race_start);
-  const raceEnd        = new Date(gpAtual.race_end);
+  const agora           = new Date();
+  const qualyStart      = new Date(gpAtual.qualy_start);
+  const qualyEnd        = new Date(gpAtual.qualy_end);
+  const raceStart       = new Date(gpAtual.race_start);
+  const raceEnd         = new Date(gpAtual.race_end);
   const msAteQualyStart = qualyStart.getTime() - agora.getTime();
-  const msAteQualyEnd  = qualyEnd.getTime()  - agora.getTime();
-  const msAteRaceStart = raceStart.getTime() - agora.getTime();
-  const msAteRaceEnd   = raceEnd.getTime()   - agora.getTime();
+  const msAteQualyEnd   = qualyEnd.getTime()   - agora.getTime();
+  const msAteRaceStart  = raceStart.getTime()  - agora.getTime();
+  const msAteRaceEnd    = raceEnd.getTime()     - agora.getTime();
   if (msAteQualyStart > 0) {
     timerAbreQuali = setTimeout(() => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
-      client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
+      client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️" + (gpAtual.flag_quali ? "\n*Random flag:* " + gpAtual.flag_quali : ""));
     }, msAteQualyStart);
-  } else {
-    // Quali já em andamento quando o bot iniciou/GP foi criado
-    client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️");
   }
   if (msAteQualyEnd > 0) {
     timerFimQuali = setTimeout(async () => {
@@ -542,7 +557,7 @@ function agendarTimers(gpAtual, nomeGP) {
     timerAbreRace = setTimeout(() => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
-      client.sendMessage(TEMPO_GROUP_ID, "🏁 *CORRIDA ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa corrida! 🏎️");
+      client.sendMessage(TEMPO_GROUP_ID, "🏁 *CORRIDA ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa corrida! 🏎️" + (gpAtual.flag_race ? "\n*Random flag:* " + gpAtual.flag_race : ""));
     }, msAteRaceStart);
   }
   if (msAteRaceEnd > 0) {
@@ -733,24 +748,22 @@ client.on("message", async message => {
     if (!gpSet)  { message.reply("Use: !racemode NOME_DO_GP"); return; }
     const racemode = carregarRaceMode();
     if (racemode.current_gp) { message.reply("⚠️ Já existe um GP ativo: *" + racemode.current_gp + "*\nUse !endgp antes de iniciar um novo."); return; }
-    const flagQuali = randomFlag();
-    const flagRace  = randomFlag();
-
-    racemode[gpSet] = {
-      qualy_start: qualyStart.toISOString(),
-      qualy_end:   qualyEnd.toISOString(),
-      race_start:  raceStart.toISOString(),
-      race_end:    raceEnd.toISOString(),
-      flag_quali:  flagQuali.flag,   // ex: 🇦🇺
-      flag_race:   flagRace.flag,    // ex: 🇯🇵
-    };
     const agora      = new Date();
     const qualyStart = new Date(agora);
     qualyStart.setHours(12, 0, 0, 0);
     const qualyEnd  = new Date(qualyStart.getTime() + 24 * 60 * 60 * 1000);
     const raceStart = new Date(qualyEnd.getTime()   + 1  * 60 * 60 * 1000);
     const raceEnd   = new Date(raceStart.getTime()  + 24 * 60 * 60 * 1000);
-    racemode[gpSet] = { qualy_start: qualyStart.toISOString(), qualy_end: qualyEnd.toISOString(), race_start: raceStart.toISOString(), race_end: raceEnd.toISOString() };
+    const flagQuali = randomFlag();
+    const flagRace  = randomFlag();
+    racemode[gpSet] = {
+      qualy_start: qualyStart.toISOString(),
+      qualy_end:   qualyEnd.toISOString(),
+      race_start:  raceStart.toISOString(),
+      race_end:    raceEnd.toISOString(),
+      flag_quali:  flagQuali.flag,
+      flag_race:   flagRace.flag,
+    };
     racemode.current_gp = gpSet;
     salvarRaceMode(racemode);
     agendarTimers(racemode[gpSet], gpSet);
