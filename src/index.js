@@ -671,6 +671,15 @@ const client = new Client({
 
 client.on("qr", qr => qrcode.generate(qr, { small: true }));
 client.on("ready", () => { console.log("Bot ready"); reagendarTimersSeNecessario(); });
+client.on("disconnected", (reason) => {
+  console.log("Bot desconectado:", reason);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("Erro não tratado:", err);
+  process.exit(1);
+});
 
 client.on("message", async message => {
   if (!isGP(message)) return;
