@@ -93,16 +93,6 @@ function isAdmin(message)      { return ADM_IDS.includes(message.author || messa
 function isComissario(message) { return COMISSARIOS.includes(message.author) || isAdmin(message); }
 function isGP(message)         { return gp_IDS.includes(message.from); }
 
-// FIX: data sempre no fuso de Brasília, nunca UTC
-function getDataHoje() {
-  return new Date().toLocaleDateString("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).split("/").reverse().join("-"); // YYYY-MM-DD
-}
-
 function tempoParaMs(t) {
   if (!t) return Infinity;
   const [min, rest] = t.split(":");
@@ -138,10 +128,18 @@ function carregarDados() {
 }
 function salvarDados(dados) { salvar(dadosFile, dados); }
 
-// FIX: não limpa mais por data — só retorna o que existe ou um objeto vazio
+// ── CORREÇÃO DE FUSO: usa métodos locais em vez de toISOString() (que é sempre UTC) ──
+function getDataLocal() {
+  const agora = new Date();
+  const ano   = agora.getFullYear();
+  const mes   = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia   = String(agora.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
 function getDadosHoje() {
+  const hoje  = getDataLocal();
   const dados = carregarDados();
-  if (!dados) return { data: getDataHoje(), tempos: [] };
+  if (!dados || dados.data !== hoje) return { data: hoje, tempos: [] };
   return dados;
 }
 
@@ -246,7 +244,7 @@ async function gerarResultado(message) {
   if (!dados || dados.tempos.length === 0) { message.reply("Não há tempos registrados para este GP."); return; }
   const ordenados     = ordenarTempos(dados.tempos);
   const participantes = carregarParticipantes();
-  let resposta        = "🏆 *RESULTADO OFICIAL: " + nomeGP + "* 🏆\n📅 " + new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) + "\n\n";
+  let resposta        = "🏆 *RESULTADO OFICIAL: " + nomeGP + "* 🏆\n📅 " + new Date().toLocaleDateString("pt-BR") + "\n\n";
   ordenados.forEach((t, i) => {
     const ms         = tempoParaMs(t.tempo) + (t.penalidade || 0) * 1000;
     const tempoFinal = msParaTempo(ms);
@@ -382,9 +380,21 @@ async function aprovarBestlap(message) {
   const pend    = carregarBestlapPend();
   const entrada = pend[nick.toLowerCase()];
   if (!entrada) { message.reply("❌ Nenhum bestlap pendente para " + nick + "."); return; }
+
+  // ── CORREÇÃO: quali notifica no grupo de quali, corrida no grupo de tempos ──
+  const racemode  = carregarRaceMode();
+  const gpAtual   = racemode.current_gp ? racemode[racemode.current_gp] : null;
+  const sessao    = getSessaoAtual(gpAtual);
+  const grupoNotif = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
+
   let dados    = getDadosHoje();
   const novoMs = tempoParaMs(entrada.tempo);
   const index  = dados.tempos.findIndex(t => t.nick === entrada.nick);
+
+  // Busca o piloto para mencioná-lo na notificação
+  const participantes = carregarParticipantes();
+  const jogador       = participantes.find(p => p.nick === entrada.nick);
+
   if (index !== -1) {
     const tempoAtualMs = tempoParaMs(dados.tempos[index].tempo);
     if (novoMs < tempoAtualMs) {
@@ -403,8 +413,15 @@ async function aprovarBestlap(message) {
   salvarDados(dados);
   delete pend[nick.toLowerCase()];
   salvarBestlapPend(pend);
+
   message.reply("✅ Bestlap de " + nick + " aprovado! Tempo: " + entrada.tempo);
-  client.sendMessage(TEMPO_GROUP_ID, "✅ *Bestlap aprovado!*\n👤 " + nick + "\n⏱️ " + entrada.tempo);
+
+  // ── CORREÇÃO: notifica no grupo correto e menciona o piloto ──
+  await client.sendMessage(
+    grupoNotif,
+    "✅ *Bestlap aprovado!*\n👤 @" + (entrada.autorId ? entrada.autorId.split("@")[0] : nick) + " (" + nick + ")\n⏱️ " + entrada.tempo,
+    entrada.autorId ? { mentions: [entrada.autorId] } : {}
+  );
 }
 
 function verificarFastestLap(dados, nick, novoTempoMs, sessao) {
@@ -437,7 +454,10 @@ async function handleTempo(message, jogador) {
   if (sessao === "QUALI") {
     const d = getDadosHoje();
     const reg = d.tempos.find(t => t.nick === nick);
-    if (reg && (reg.envios || 0) >= 4) { message.reply("🚫 Você já atingiu o limite de 4 envios na quali."); return; }
+    if (reg && (reg.envios || 0) >= 4) {
+      message.reply("🚫 Você já atingiu o limite de 4 envios na quali.");
+      return;
+    }
   }
   if (!message.hasMedia) { message.reply("Envie a imagem junto com o comando."); return; }
   const agora        = new Date();
@@ -500,7 +520,10 @@ async function handleBestLap(message, jogador) {
   if (sessao === "QUALI") {
     const d = getDadosHoje();
     const reg = d.tempos.find(t => t.nick === nick);
-    if (reg && (reg.envios || 0) >= 4) { message.reply("🚫 Você já atingiu o limite de 4 envios na quali."); return; }
+    if (reg && (reg.envios || 0) >= 4) {
+      message.reply("🚫 Você já atingiu o limite de 4 envios na quali.");
+      return;
+    }
   }
   if (!message.hasMedia) { message.reply("Envie a imagem junto com o comando."); return; }
   const agora        = new Date();
@@ -517,7 +540,8 @@ async function handleBestLap(message, jogador) {
   const pend        = carregarPenPendentes();
   const penPendente = pend[nick.toLowerCase()] || 0;
   if (penPendente) { delete pend[nick.toLowerCase()]; salvarPenPendentes(pend); }
-  aguardandoComprovacao[message.author] = { nick, tempo, caminhoTempo: caminho, penalidade: aplicarPenal + penPendente };
+  // Salva o autorId junto para poder mencionar o piloto depois
+  aguardandoComprovacao[message.author] = { nick, tempo, caminhoTempo: caminho, penalidade: aplicarPenal + penPendente, autorId: message.author };
   message.reply("✅ Tempo lido: *" + tempo + "*\n📸 Agora envie a foto de comprovação (sem comando).");
 }
 
@@ -540,19 +564,13 @@ function agendarTimers(gpAtual, nomeGP) {
   const msAteQualyEnd   = qualyEnd.getTime()   - agora.getTime();
   const msAteRaceStart  = raceStart.getTime()  - agora.getTime();
   const msAteRaceEnd    = raceEnd.getTime()     - agora.getTime();
-
-  // Abertura da quali — agendada, não imediata
   if (msAteQualyStart > 0) {
     timerAbreQuali = setTimeout(() => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
       client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️" + (gpAtual.flag_quali ? "\n*Random flag:* " + gpAtual.flag_quali : ""));
     }, msAteQualyStart);
-  } else {
-    // Quali já aberta no momento do reagendamento (restart)
-    client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️" + (gpAtual.flag_quali ? "\n*Random flag:* " + gpAtual.flag_quali : ""));
   }
-
   if (msAteQualyEnd > 0) {
     timerFimQuali = setTimeout(async () => {
       const rm = carregarRaceMode();
@@ -562,13 +580,12 @@ function agendarTimers(gpAtual, nomeGP) {
         const rm2 = carregarRaceMode();
         if (!rm2.current_gp) return;
         await gerarTabelaQuali(nomeGP);
-        // FIX: limpa dados com data correta no fuso de Brasília
-        salvarDados({ data: getDataHoje(), tempos: [] });
+        // ── CORREÇÃO: usa getDataLocal() ao limpar dados após quali ──
+        salvarDados({ data: getDataLocal(), tempos: [] });
         client.sendMessage(QUALI_GROUP_ID, "🧹 *DADOS LIMPOS!* O sistema está pronto para receber os tempos da CORRIDA.");
       }, 10 * 60 * 1000);
     }, msAteQualyEnd);
   }
-
   if (msAteRaceStart > 0) {
     timerAbreRace = setTimeout(() => {
       const rm = carregarRaceMode();
@@ -576,7 +593,6 @@ function agendarTimers(gpAtual, nomeGP) {
       client.sendMessage(TEMPO_GROUP_ID, "🏁 *CORRIDA ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa corrida! 🏎️" + (gpAtual.flag_race ? "\n*Random flag:* " + gpAtual.flag_race : ""));
     }, msAteRaceStart);
   }
-
   if (msAteRaceEnd > 0) {
     timerFimRace = setTimeout(() => {
       const rm = carregarRaceMode();
@@ -650,23 +666,42 @@ client.on("message", async message => {
     const media       = await message.downloadMedia();
     fs.writeFileSync(caminhoComp, Buffer.from(media.data, "base64"));
     const pend = carregarBestlapPend();
-    pend[entrada.nick.toLowerCase()] = { nick: entrada.nick, tempo: entrada.tempo, penalidade: entrada.penalidade, caminhoTempo: entrada.caminhoTempo, caminhoComp };
+    // Persiste autorId no JSON para poder mencionar ao aprovar
+    pend[entrada.nick.toLowerCase()] = {
+      nick: entrada.nick,
+      tempo: entrada.tempo,
+      penalidade: entrada.penalidade,
+      caminhoTempo: entrada.caminhoTempo,
+      caminhoComp,
+      autorId: entrada.autorId
+    };
     salvarBestlapPend(pend);
     const participantes = carregarParticipantes();
     const jogador       = participantes.find(p => p.nick === entrada.nick);
     const nomeExibido   = jogador ? jogador.nome : entrada.nick;
     const equipe        = jogador ? jogador.equipe : "N/D";
-    await client.sendMessage(SOLICITACOES_GROUP_ID,
+
+    // ── CORREÇÃO: menciona todos os comissários na solicitação ──
+    await client.sendMessage(
+      SOLICITACOES_GROUP_ID,
       "📋 *SOLICITAÇÃO DE BESTLAP*\n" +
       "👤 Piloto: " + nomeExibido + " (" + entrada.nick + ")\n" +
       "🏎️ Equipe: " + equipe + "\n" +
       "⏱️ Tempo: *" + entrada.tempo + "*\n\n" +
-      "Use *!aprovar " + entrada.nick + "* para confirmar ou *!remover " + entrada.nick + "* para rejeitar."
+      COMISSARIOS.map(c => "@" + c.split("@")[0]).join(" ") + "\n" +
+      "Use *!aprovar " + entrada.nick + "* para confirmar ou *!remover " + entrada.nick + "* para rejeitar.",
+      { mentions: COMISSARIOS }
     );
     await client.sendMessage(SOLICITACOES_GROUP_ID, MessageMedia.fromFilePath(entrada.caminhoTempo));
     await client.sendMessage(SOLICITACOES_GROUP_ID, MessageMedia.fromFilePath(caminhoComp));
     delete aguardandoComprovacao[id];
-    message.reply("📨 Solicitação enviada aos comissários! Aguarde a aprovação.");
+
+    // ── CORREÇÃO: menciona o piloto na confirmação de envio ──
+    await client.sendMessage(
+      message.from,
+      "📨 @" + id.split("@")[0] + " Solicitação enviada aos comissários! Aguarde a aprovação.",
+      { mentions: [id] }
+    );
     return;
   }
 
@@ -811,8 +846,8 @@ client.on("message", async message => {
     if (formato === "csv") { fs.writeFileSync("./dados.csv", jsonParaCSV(dados)); await message.reply(MessageMedia.fromFilePath("./dados.csv")); }
     else if (formato === "txt") { fs.writeFileSync("./dados.txt", jsonParaTXT(dados)); await message.reply(MessageMedia.fromFilePath("./dados.txt")); }
     else { message.reply(jsonParaTXT(dados)); }
-    // FIX: limpa com data correta no fuso de Brasília
-    salvarDados({ data: getDataHoje(), tempos: [] });
+    // ── CORREÇÃO: usa getDataLocal() ao limpar dados no !data ──
+    salvarDados({ data: getDataLocal(), tempos: [] });
     limparImg();
     message.reply("🧹 Dados e imagens limpos.");
     return;
