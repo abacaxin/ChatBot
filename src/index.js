@@ -93,6 +93,16 @@ function isAdmin(message)      { return ADM_IDS.includes(message.author || messa
 function isComissario(message) { return COMISSARIOS.includes(message.author) || isAdmin(message); }
 function isGP(message)         { return gp_IDS.includes(message.from); }
 
+// FIX: data sempre no fuso de Brasília, nunca UTC
+function getDataHoje() {
+  return new Date().toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).split("/").reverse().join("-"); // YYYY-MM-DD
+}
+
 function tempoParaMs(t) {
   if (!t) return Infinity;
   const [min, rest] = t.split(":");
@@ -127,12 +137,14 @@ function carregarDados() {
   return JSON.parse(fs.readFileSync(dadosFile));
 }
 function salvarDados(dados) { salvar(dadosFile, dados); }
+
+// FIX: não limpa mais por data — só retorna o que existe ou um objeto vazio
 function getDadosHoje() {
-  const hoje  = new Date().toISOString().split("T")[0];
   const dados = carregarDados();
-  if (!dados || dados.data !== hoje) return { data: hoje, tempos: [] };
+  if (!dados) return { data: getDataHoje(), tempos: [] };
   return dados;
 }
+
 function ordenarTempos(tempos) {
   return [...tempos].filter(t => t.tempo).sort((a, b) => {
     const tA = tempoParaMs(a.tempo) + (a.penalidade || 0) * 1000;
@@ -234,7 +246,7 @@ async function gerarResultado(message) {
   if (!dados || dados.tempos.length === 0) { message.reply("Não há tempos registrados para este GP."); return; }
   const ordenados     = ordenarTempos(dados.tempos);
   const participantes = carregarParticipantes();
-  let resposta        = "🏆 *RESULTADO OFICIAL: " + nomeGP + "* 🏆\n📅 " + new Date().toLocaleDateString("pt-BR") + "\n\n";
+  let resposta        = "🏆 *RESULTADO OFICIAL: " + nomeGP + "* 🏆\n📅 " + new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) + "\n\n";
   ordenados.forEach((t, i) => {
     const ms         = tempoParaMs(t.tempo) + (t.penalidade || 0) * 1000;
     const tempoFinal = msParaTempo(ms);
@@ -425,10 +437,7 @@ async function handleTempo(message, jogador) {
   if (sessao === "QUALI") {
     const d = getDadosHoje();
     const reg = d.tempos.find(t => t.nick === nick);
-    if (reg && (reg.envios || 0) >= 4) {
-      message.reply("🚫 Você já atingiu o limite de 4 envios na quali.");
-      return;
-    }
+    if (reg && (reg.envios || 0) >= 4) { message.reply("🚫 Você já atingiu o limite de 4 envios na quali."); return; }
   }
   if (!message.hasMedia) { message.reply("Envie a imagem junto com o comando."); return; }
   const agora        = new Date();
@@ -491,10 +500,7 @@ async function handleBestLap(message, jogador) {
   if (sessao === "QUALI") {
     const d = getDadosHoje();
     const reg = d.tempos.find(t => t.nick === nick);
-    if (reg && (reg.envios || 0) >= 4) {
-      message.reply("🚫 Você já atingiu o limite de 4 envios na quali.");
-      return;
-    }
+    if (reg && (reg.envios || 0) >= 4) { message.reply("🚫 Você já atingiu o limite de 4 envios na quali."); return; }
   }
   if (!message.hasMedia) { message.reply("Envie a imagem junto com o comando."); return; }
   const agora        = new Date();
@@ -534,13 +540,19 @@ function agendarTimers(gpAtual, nomeGP) {
   const msAteQualyEnd   = qualyEnd.getTime()   - agora.getTime();
   const msAteRaceStart  = raceStart.getTime()  - agora.getTime();
   const msAteRaceEnd    = raceEnd.getTime()     - agora.getTime();
+
+  // Abertura da quali — agendada, não imediata
   if (msAteQualyStart > 0) {
     timerAbreQuali = setTimeout(() => {
       const rm = carregarRaceMode();
       if (!rm.current_gp) return;
       client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️" + (gpAtual.flag_quali ? "\n*Random flag:* " + gpAtual.flag_quali : ""));
     }, msAteQualyStart);
+  } else {
+    // Quali já aberta no momento do reagendamento (restart)
+    client.sendMessage(QUALI_GROUP_ID, "🟢 *QUALI ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa sorte! 🏎️" + (gpAtual.flag_quali ? "\n*Random flag:* " + gpAtual.flag_quali : ""));
   }
+
   if (msAteQualyEnd > 0) {
     timerFimQuali = setTimeout(async () => {
       const rm = carregarRaceMode();
@@ -550,11 +562,13 @@ function agendarTimers(gpAtual, nomeGP) {
         const rm2 = carregarRaceMode();
         if (!rm2.current_gp) return;
         await gerarTabelaQuali(nomeGP);
-        salvarDados({ data: new Date().toISOString().split("T")[0], tempos: [] });
+        // FIX: limpa dados com data correta no fuso de Brasília
+        salvarDados({ data: getDataHoje(), tempos: [] });
         client.sendMessage(QUALI_GROUP_ID, "🧹 *DADOS LIMPOS!* O sistema está pronto para receber os tempos da CORRIDA.");
       }, 10 * 60 * 1000);
     }, msAteQualyEnd);
   }
+
   if (msAteRaceStart > 0) {
     timerAbreRace = setTimeout(() => {
       const rm = carregarRaceMode();
@@ -562,6 +576,7 @@ function agendarTimers(gpAtual, nomeGP) {
       client.sendMessage(TEMPO_GROUP_ID, "🏁 *CORRIDA ABERTA! GP " + nomeGP + "*\nEnviem seus tempos com !tempo ou !bestlap. Boa corrida! 🏎️" + (gpAtual.flag_race ? "\n*Random flag:* " + gpAtual.flag_race : ""));
     }, msAteRaceStart);
   }
+
   if (msAteRaceEnd > 0) {
     timerFimRace = setTimeout(() => {
       const rm = carregarRaceMode();
@@ -796,7 +811,8 @@ client.on("message", async message => {
     if (formato === "csv") { fs.writeFileSync("./dados.csv", jsonParaCSV(dados)); await message.reply(MessageMedia.fromFilePath("./dados.csv")); }
     else if (formato === "txt") { fs.writeFileSync("./dados.txt", jsonParaTXT(dados)); await message.reply(MessageMedia.fromFilePath("./dados.txt")); }
     else { message.reply(jsonParaTXT(dados)); }
-    salvarDados({ data: new Date().toISOString().split("T")[0], tempos: [] });
+    // FIX: limpa com data correta no fuso de Brasília
+    salvarDados({ data: getDataHoje(), tempos: [] });
     limparImg();
     message.reply("🧹 Dados e imagens limpos.");
     return;
