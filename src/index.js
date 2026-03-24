@@ -579,9 +579,11 @@ function agendarTimers(gpAtual, nomeGP) {
         const rm2 = carregarRaceMode();
         if (!rm2.current_gp) return;
         await gerarTabelaQuali(nomeGP);
-        // ── CORREÇÃO: usa getDataLocal() ao limpar dados após quali ──
         salvarDados({ data: getDataLocal(), tempos: [] });
         client.sendMessage(QUALI_GROUP_ID, "🧹 *DADOS LIMPOS!* O sistema está pronto para receber os tempos da CORRIDA.");
+        // ── marca que o resultado já foi enviado ──
+        rm2[rm2.current_gp].quali_resultado_enviado = true;
+        salvarRaceMode(rm2);
       }, 10 * 60 * 1000);
     }, msAteQualyEnd);
   }
@@ -601,18 +603,35 @@ function agendarTimers(gpAtual, nomeGP) {
   }
 }
 
-function reagendarTimersSeNecessario() {
+async function reagendarTimersSeNecessario() {
   const racemode = carregarRaceMode();
   if (!racemode.current_gp) return;
   const gpAtual = racemode[racemode.current_gp];
   if (!gpAtual) return;
-  const agora   = new Date();
-  const raceEnd = new Date(gpAtual.race_end);
-  if (agora > raceEnd) return;
-  console.log("Reagendando timers para GP: " + racemode.current_gp);
-  agendarTimers(gpAtual, racemode.current_gp);
-}
+  const agora    = new Date();
+  const nomeGP   = racemode.current_gp;
 
+  const qualyStart = new Date(gpAtual.qualy_start);
+  const qualyEnd   = new Date(gpAtual.qualy_end);
+  const raceStart  = new Date(gpAtual.race_start);
+  const raceEnd    = new Date(gpAtual.race_end);
+
+  // quali já encerrou mas resultado não foi enviado
+  if (agora > qualyEnd && agora < raceStart && !gpAtual.quali_resultado_enviado) {
+    console.log("Quali encerrada durante downtime, enviando resultado agora...");
+    await gerarTabelaQuali(nomeGP);
+    salvarDados({ data: getDataLocal(), tempos: [] });
+    client.sendMessage(QUALI_GROUP_ID, "🧹 *DADOS LIMPOS!* O sistema está pronto para receber os tempos da CORRIDA.");
+    gpAtual.quali_resultado_enviado = true;
+    salvarRaceMode(racemode);
+    return;
+  }
+
+  // corrida já encerrou
+  if (agora > raceEnd) return;
+
+  agendarTimers(gpAtual, nomeGP);
+}
 function jsonParaCSV(dados) {
   if (!dados.tempos || dados.tempos.length === 0) return "";
   const participantes = carregarParticipantes();
