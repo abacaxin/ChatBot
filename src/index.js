@@ -1053,6 +1053,35 @@ client.on("message", async message => {
     if (!jogador) { message.reply("Você precisa se registrar primeiro com !registrar."); return; }
     await handleBestLap(message, jogador); return;
   }
+  if (texto.startsWith("!hana")) {
+    const racemode = carregarRaceMode();
+    const gpAtual  = racemode.current_gp ? racemode[racemode.current_gp] : null;
+    const sessao   = getSessaoAtual(gpAtual);
+    if (sessao === "QUALI" || sessao === "RACE") {
+      const grupoPermitido = sessao === "QUALI" ? QUALI_GROUP_ID : TEMPO_GROUP_ID;
+      if (message.from !== grupoPermitido) { message.reply("Use o grupo correto para enviar tempos."); return; }
+    }
+    if (!isAdmin(message) && !isComissario(message)) {
+      message.reply("Apenas ADMs ou comissários podem enviar tempo por outro piloto.");
+      return;
+    }
+
+    const jogadorFake = { nick: "Kat4giri", nome: "Hana 🇯🇵", equipe: "???" };
+    // pega equipe real se ela estiver cadastrada
+    const participantes = carregarParticipantes();
+    const cadastro = participantes.find(p => p.nick === "Kat4giri");
+    if (cadastro) {
+      jogadorFake.nome   = cadastro.nome;
+      jogadorFake.equipe = cadastro.equipe;
+    }
+
+    if (texto.startsWith("!hanabl")) {
+      await handleBestLap(message, jogadorFake);
+    } else {
+      await handleTempo(message, jogadorFake);
+    }
+    return;
+  }
 
   if (texto.startsWith("!")) { mostrarMenuErro(message); return; }
 });
