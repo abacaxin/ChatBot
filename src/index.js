@@ -137,9 +137,8 @@ function getDataLocal() {
   return `${ano}-${mes}-${dia}`;
 }
 function getDadosHoje() {
-  const hoje  = getDataLocal();
   const dados = carregarDados();
-  if (!dados || dados.data !== hoje) return { data: hoje, tempos: [] };
+  if (!dados) return { data: getDataLocal(), tempos: [] };
   return dados;
 }
 
