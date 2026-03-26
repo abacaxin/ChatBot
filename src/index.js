@@ -252,7 +252,7 @@ async function gerarResultado(message) {
     const nome       = p ? p.nome : t.nick;
     const equipe     = p ? p.equipe : "Particular";
     const medalha    = i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : (i + 1) + "º ";
-    resposta += medalha + "*" + nome + "* (" + equipe + ")\n⏱️ " + tempoFinal + pen + "\n--------------------------\n";
+    resposta += "*" + medalha + "* | " + "*" + nome + "* (*" + equipe + "*)" + tempoFinal + pen + "\n";
   });
   message.reply(resposta);
   salvarPontuacao(nomeGP, ordenados, participantes);
